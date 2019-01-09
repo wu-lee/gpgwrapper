@@ -1,0 +1,149 @@
+#/bin/bash
+
+# Author: Nick Stokoe
+#
+# https://github.com/wu-lee/gpgwrapper
+#
+# For usage, execute with no parameters, or see the `usage` function
+# below.
+
+set -o pipefail
+set -o errexit
+
+# Defaults
+
+# We need gpg2 for it's pinentry control
+GPG=/usr/bin/gpg2
+COMMON="--exit-on-status-write-error --no-tty --batch --trust-model always --pinentry-mode cancel"
+MKDIR=/bin/mkdir
+CHMOD=/bin/chmod
+CHOWN=/bin/chown
+
+# Write to stderr
+function warn() {
+    printf "%s\n" "$*" >&2
+}
+
+# Exit with a nonzero code, printing the arguments on stderr
+function die() {
+    warn "exiting: $*" >&2
+    exit 1
+}
+
+# We use this to avoid the use of `cat`.  Works much the same.
+function copyout() {
+    while IFS='' read -r line; do
+	printf "%s\n" "$line"
+    done
+}
+
+# Versioning.
+VERSION=0.2.0
+GNUPG_VERSION=$("$GPG" --version) || die "Failed to get gpg version"
+
+# sethome <dir> - sets the GNUPGHOME environment variable
+function sethome() {
+    local keyhome=${1?you must supply a keyhome directory}
+    [[ -d "$keyhome" ]] || "$MKDIR" -p "$keyhome"
+    "$CHOWN" $EUID "$keyhome"
+    "$CHMOD" 0700 "$keyhome"
+    
+    export GNUPGHOME="$keyhome"
+}
+
+# import $pubkey 
+function import_pubkey() {
+    "$GPG" $COMMON --import 
+}
+
+# Prints the ID of the first public key found
+function firstid() {
+    "$GPG" $COMMON --list-keys --with-colons |
+	while IFS=: read -r type x x x id x; do
+	    [[ "$type" == "pub" ]] && printf "%s\n" "$id"
+	done 
+}
+
+# Encrypts stdin to stdout, using the specified key
+function encrypt() {
+    local recipient=${1?you must provide a recipient name}
+    "$GPG" $COMMON --encrypt --output - --recipient "$recipient"
+}
+
+# Decrypts stdin to stdout, using the implicit key set by the
+# encrypted stream.
+function decrypt() {
+    "$GPG" $COMMON --decrypt --output -
+}
+
+# Just prints usage to stderr
+usage() {
+    # Avoiding the use of external commands like cat, basename. 
+    copyout <<'USAGE' >&2;
+usage...
+USAGE
+}
+
+
+# Parse the options
+while getopts "deihk:r:v" OPTION
+do
+    case "$OPTION" in
+        d|e|i|h|v)
+	    [[ -z "$operation" ]] || die "can only use one of -d -e -i -h or -v"
+	    operation=$OPTION
+            ;;
+
+	k)
+	    sethome "$OPTARG"
+	    ;;
+
+	r)
+	    # If this is unset, default is to use output of firstid
+	    recipient="$OPTARG"
+	    ;;
+
+        *)
+            usage
+	    exit 1
+            ;;
+    esac
+done
+
+# Remove the options from the argument list
+shift $((OPTIND-1))
+
+
+# Help?
+if [[ "$operation" == "h" ]]; then
+    usage
+    exit 0
+fi
+
+# Version info?
+if [[ "$operation" == "v" ]]; then
+    copyout <<EOF
+VERSION: $VERSION
+
+GnuPG:
+$GNUPG_VERSION
+
+EOF
+    exit 0
+fi
+
+
+# Validate the remaining options
+if [[ $# != 0 ]]; then
+    usage
+    die "superfluous parameters were supplied"
+fi
+
+# Execute the appropriate action
+case "$operation" in
+    d) decrypt; exit;;
+    e) encrypt "${recipient:-$(firstid)}"; exit;;
+    i) import_pubkey; exit;;
+esac
+
+die "you must supply one of the options -d -e -i -v or -h."
