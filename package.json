@@ -1,0 +1,26 @@
+{
+  "name": "gpgwrapper",
+  "version": "0.1.0",
+  "description": "simplified batch-mode GPG encryption for scripts",
+  "main": "gpgwrapper",
+  "directories": {
+  },
+  "scripts": {
+    "insert-usage": "perl insert-usage.pl"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wu-lee/gpgwrapper.git"
+  },
+  "keywords": [
+    "#"
+  ],
+  "author": "bash gnupg encryption",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wu-lee/gpgwrapper/issues"
+  },
+  "homepage": "https://github.com/wu-lee/gpgwrapper",
+  "devDependencies": {
+  }
+}
