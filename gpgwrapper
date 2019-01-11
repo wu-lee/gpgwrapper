@@ -80,7 +80,52 @@ function decrypt() {
 usage() {
     # Avoiding the use of external commands like cat, basename. 
     copyout <<'USAGE' >&2;
-usage...
+USAGE:
+
+Before anything else, you need a keychain directory.  You *can* use
+the default location used by GnuPG but this may interfere with other
+keys being used by the same user account. For encrypting at least,
+you're advised to select another path, either setting it beforehand
+with the `GNUPGHOME` environment variable, or overriding it with the
+`-k` option.  When `-k` is supplied, the script will attempt to create
+the supplied `<path>` if not present, and make it unreadable by all
+except the current effective user. Otherwise the keychain directory is
+assumed to be set up already.
+
+Given that, these are the basic operations.
+
+
+    gpgwrapper -i [ -r <keyid> ] [ -k <path> ]
+
+Imports a GPG key read on stdin into the keychain.  You can use this
+to import a key exported from another GPG keychain. (Note, the trust
+model is `always`, so this won't explicitly mark it trusted, because
+all keys are trusted.) 
+
+
+    gpgwrapper -e [ -r <keyid> ] [ -k <path> ]
+
+Encrypts stdin to stdout using a public key from the keychain
+identified by `<keyid>` (it defaults to using the first key listed if
+the `-r` option is omitted.)
+
+
+	gpgwrapper -d [ -k <path> ]
+
+Decrypts stdin to stdout using the private key identified by the
+encrypted stream, which must be in the keychain.
+
+
+    gpgwrapper -v
+
+Prints out version information for this script and GPG.
+
+
+    gpgwrapper -h
+	
+Prints this usage.
+
+
 USAGE
 }
 
