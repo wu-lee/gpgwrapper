@@ -14,7 +14,7 @@ set -o errexit
 
 # We need gpg2 for it's pinentry control
 GPG=/usr/bin/gpg2
-COMMON="--exit-on-status-write-error --no-tty --batch --trust-model always --pinentry-mode cancel"
+COMMON="--exit-on-status-write-error --no-tty --batch --trust-model always --pinentry-mode loopback"
 MKDIR=/bin/mkdir
 CHMOD=/bin/chmod
 CHOWN=/bin/chown
@@ -44,9 +44,16 @@ GNUPG_VERSION=$("$GPG" --version) || die "Failed to get gpg version"
 # sethome <dir> - sets the GNUPGHOME environment variable
 function sethome() {
     local keyhome=${1?you must supply a keyhome directory}
-    [[ -d "$keyhome" ]] || "$MKDIR" -p "$keyhome"
-    "$CHOWN" $EUID "$keyhome"
-    "$CHMOD" 0700 "$keyhome"
+    [[ -d "$keyhome" ]] || {
+        "$MKDIR" -p "$keyhome"
+        
+        # Work around issues with gpg-agent < 2.1.12 not enabling loopback.
+        # See https://lists.gnupg.org/pipermail/gnupg-devel/2016-October/031899.html
+        printf "allow-loopback-pinentry\n" >>"$keyhome/gpg-agent.conf"
+        "$CHMOD" 0700 "$keyhome/gpg-agent.conf"
+        "$CHOWN" $EUID "$keyhome"
+        "$CHMOD" 0700 "$keyhome"
+    }
     
     export GNUPGHOME="$keyhome"
 }
@@ -73,7 +80,7 @@ function encrypt() {
 # Decrypts stdin to stdout, using the implicit key set by the
 # encrypted stream.
 function decrypt() {
-    "$GPG" $COMMON --decrypt --output -
+    "$GPG" $COMMON "${passphrase_opt[@]}" --decrypt --output -
 }
 
 # Just prints usage to stderr
@@ -110,7 +117,7 @@ identified by `<keyid>` (it defaults to using the first key listed if
 the `-r` option is omitted.)
 
 
-        gpgwrapper -d [ -k <path> ]
+    gpgwrapper -d [ -k <path> ]
 
 Decrypts stdin to stdout using the private key identified by the
 encrypted stream, which must be in the keychain.
@@ -131,7 +138,7 @@ USAGE
 
 
 # Parse the options
-while getopts "deihk:r:v" OPTION
+while getopts "deihk:p:r:v" OPTION
 do
     case "$OPTION" in
         d|e|i|h|v)
@@ -146,6 +153,17 @@ do
         r)
             # If this is unset, default is to use output of firstid
             recipient="$OPTARG"
+            ;;
+
+        p)
+            # Get passphrase from somewhere
+            if [[ "$OPTARG" =~ [0-9]+ ]]; then
+                passphrase_opt=(--passphrase-fd "$OPTARG")
+            elif [[ -f "$OPTARG" ]]; then
+                passphrase_opt=(--passphrase-file "$OPTARG")
+            else
+                die "-p option argument is neither numeric nor a file"
+            fi
             ;;
 
         *)

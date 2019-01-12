@@ -6,7 +6,7 @@ function standard_usage {
     ../gpgwrapper -ik tmp/pk < data/pub.key &&
     ../gpgwrapper -ik tmp/sk < data/sec.key &&
     ../gpgwrapper -ek tmp/pk <data/lorem >tmp/enc &&
-    ../gpgwrapper -dk tmp/sk <tmp/enc >tmp/lorem
+    ../gpgwrapper -dk tmp/sk -p 9 9<<<passphrase <tmp/enc >tmp/lorem
 }
 
 function setup {

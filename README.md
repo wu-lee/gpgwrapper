@@ -68,11 +68,16 @@ identified by `<keyid>` (it defaults to using the first key listed if
 the `-r` option is omitted.)
 
 
-	gpgwrapper -d [ -k <path> ]
+	gpgwrapper -d [ -k <path> ] [ -p <passphrase-source> ]
 
 Decrypts stdin to stdout using the private key identified by the
 encrypted stream, which must be in the keychain.
 
+By default if a passphrase is needed, and `gpg-agent` doesn't already
+know it, the decryption will fail.  However if `-p` is supplied with
+either a numeric file-descriptor, or the path to an exising file, the
+passphrase will be read from that (and `gpg-agent` will remember it
+forthwith)
 
     gpgwrapper -v
 
@@ -166,8 +171,6 @@ For security, we avoid placing any sensitive information either in:
  - temporary files or otherwise
 
 
-# CAVEATS / DISCLAIMER
-
 # TESTS
 
 There are some test cases in the `test/` directory.
@@ -188,9 +191,28 @@ Or directly like this:
 
     (cd tests; bats .)
 
-This script works correctly to the best of my knowledge. However, as
-ever with open source software: inspect the source code and use at
-your own risk.
+
+# CAVEATS / DISCLAIMER
+
+For versions of `gpg-agent` <2.1.12 loopback pinentry is not enabled
+by default, and you need to enable it to decrypt without a passphrase
+prompt by adding `allow-loopback-pinentry` into
+`$GNUPGHOME/gpg-agent.conf` and restarting it with `gpgconf --reload
+gpg-agent`
+
+https://lists.gnutls.org/pipermail/gnupg-devel/2016-November/032093.html
+
+Note that `gpgagent` will insert this option for you whenever it
+creates a new keychain directory because the `-k` option is supplied.
+
+Otherwise, to decrypt, you need to supply gpg-agent with your
+passphrase beforehand by using `gpg` directly and entering it into the
+pin-entry dialog which pops up. (This dialog is disabled in
+`gpgwrapper`.)
+
+Other than this, this script works correctly to the best of my
+knowledge. However, as ever with open source software: inspect the
+source code and use at your own risk.
 
 
 # REQUIREMENTS
