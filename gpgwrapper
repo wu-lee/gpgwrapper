@@ -33,7 +33,7 @@ function die() {
 # We use this to avoid the use of `cat`.  Works much the same.
 function copyout() {
     while IFS='' read -r line; do
-	printf "%s\n" "$line"
+        printf "%s\n" "$line"
     done
 }
 
@@ -59,9 +59,9 @@ function import_pubkey() {
 # Prints the ID of the first public key found
 function firstid() {
     "$GPG" $COMMON --list-keys --with-colons |
-	while IFS=: read -r type x x x id x; do
-	    [[ "$type" == "pub" ]] && printf "%s\n" "$id"
-	done 
+        while IFS=: read -r type x x x id x; do
+            [[ "$type" == "pub" ]] && printf "%s\n" "$id"
+        done 
 }
 
 # Encrypts stdin to stdout, using the specified key
@@ -110,7 +110,7 @@ identified by `<keyid>` (it defaults to using the first key listed if
 the `-r` option is omitted.)
 
 
-	gpgwrapper -d [ -k <path> ]
+        gpgwrapper -d [ -k <path> ]
 
 Decrypts stdin to stdout using the private key identified by the
 encrypted stream, which must be in the keychain.
@@ -122,7 +122,7 @@ Prints out version information for this script and GPG.
 
 
     gpgwrapper -h
-	
+        
 Prints this usage.
 
 
@@ -135,22 +135,22 @@ while getopts "deihk:r:v" OPTION
 do
     case "$OPTION" in
         d|e|i|h|v)
-	    [[ -z "$operation" ]] || die "can only use one of -d -e -i -h or -v"
-	    operation=$OPTION
+            [[ -z "$operation" ]] || die "can only use one of -d -e -i -h or -v"
+            operation=$OPTION
             ;;
 
-	k)
-	    sethome "$OPTARG"
-	    ;;
+        k)
+            sethome "$OPTARG"
+            ;;
 
-	r)
-	    # If this is unset, default is to use output of firstid
-	    recipient="$OPTARG"
-	    ;;
+        r)
+            # If this is unset, default is to use output of firstid
+            recipient="$OPTARG"
+            ;;
 
         *)
             usage
-	    exit 1
+            exit 1
             ;;
     esac
 done
