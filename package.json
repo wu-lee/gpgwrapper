@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "description": "simplified batch-mode GPG encryption for scripts",
   "main": "gpgwrapper",
-  "directories": {
-  },
+  "directories": {},
   "scripts": {
+    "test": "cd tests; bats *.bats",
     "insert-usage": "perl insert-usage.pl"
   },
   "repository": {
@@ -22,5 +22,6 @@
   },
   "homepage": "https://github.com/wu-lee/gpgwrapper",
   "devDependencies": {
+    "bats": "^1.1.0"
   }
 }

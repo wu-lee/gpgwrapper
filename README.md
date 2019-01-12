@@ -168,6 +168,26 @@ For security, we avoid placing any sensitive information either in:
 
 # CAVEATS / DISCLAIMER
 
+# TESTS
+
+There are some test cases in the `test/` directory.
+
+These use the [bats][3] testing framework. This can be installed a
+number of ways, and a `package.json` file is included to support
+installation with `npm` (although this is not mandatory). A bonus of
+adding a `package.json` is that it provides licence and version
+management.
+
+    npm install --save-dev bats
+
+If you use npm, then you can run the tests like this:
+
+    npm test
+
+Or directly like this:
+
+    (cd tests; bats .)
+
 This script works correctly to the best of my knowledge. However, as
 ever with open source software: inspect the source code and use at
 your own risk.
