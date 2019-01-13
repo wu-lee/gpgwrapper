@@ -32,6 +32,9 @@ function standard_usage {
 }
 
 function setup {
+    # Clear gpg-agent passphrase cache
+    GNUPGHOME=tmp/sk gpgconf --reload gpg-agent
+    
     # Recreate the tmp directory
     rm -rf tmp
     mkdir -p tmp
