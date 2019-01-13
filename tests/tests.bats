@@ -21,3 +21,10 @@ function setup {
     diff -q data/lorem tmp/lorem
 }
 
+@test "resist PATH hijacking" {
+    # the dummy dir contains fake commands like cat, base64, openssl
+    PATH=dummy:$PATH run standard_usage
+    [ "$status" -eq 0 ] || echo rc $status $output
+    diff -q data/lorem tmp/lorem
+}
+
