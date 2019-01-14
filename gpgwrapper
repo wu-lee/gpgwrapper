@@ -60,7 +60,8 @@ function sethome() {
 
 # import $pubkey 
 function import_pubkey() {
-    "$GPG" $COMMON --import 
+    "$GPG" $COMMON --import ||
+	die "import failed"
 }
 
 # Prints the ID of the first public key found
@@ -74,13 +75,15 @@ function firstid() {
 # Encrypts stdin to stdout, using the specified key
 function encrypt() {
     local recipient=${1?you must provide a recipient name}
-    "$GPG" $COMMON --encrypt --output - --recipient "$recipient"
+    "$GPG" $COMMON --encrypt --output - --recipient "$recipient" ||
+	die "encryption failed"
 }
 
 # Decrypts stdin to stdout, using the implicit key set by the
 # encrypted stream.
 function decrypt() {
-    "$GPG" $COMMON "${passphrase_opt[@]}" --decrypt --output -
+    "$GPG" $COMMON "${passphrase_opt[@]}" --decrypt --output - ||
+	die "decryption failed"
 }
 
 # Just prints usage to stderr
@@ -209,4 +212,5 @@ case "$operation" in
     i) import_pubkey; exit;;
 esac
 
+warn "Use the -h option for usage information."
 die "you must supply one of the options -d -e -i -v or -h."

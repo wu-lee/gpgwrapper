@@ -67,3 +67,23 @@ function setup {
     diff -q data/lorem tmp/dec2
 }
 
+@test "wrong key decrypt failure" {
+    ../gpgwrapper -ik tmp/sk <data/sec2.key 
+    # sec2.key is wrong decrypt key for pub1.key
+    run GPGWRAPPER_IO -dk tmp/sk data/enc1 tmp/dec
+    [ "$status" -ne 0 ]
+    grep 'gpg: encrypted with RSA key' <<<$output
+    grep 'gpg: decryption failed: No secret key' <<<$output
+    grep 'exiting: decryption failed' <<<$output
+}
+
+@test "wrong passphrase decrypt failure" {
+    ../gpgwrapper -ik tmp/sk <data/sec2.key 
+    # 'passphrase' is wrong passphrase for sec2.key
+    run GPGWRAPPER_IO -dk tmp/sk -p 9 data/enc2 tmp/dec2 9<<<passphrase
+    [ "$status" -ne 0 ]
+    grep 'gpg: public key decryption failed: Bad passphrase' <<<$output
+    grep 'gpg: decryption failed: No secret key' <<<$output
+    grep 'exiting: decryption failed' <<<$output
+}
+
