@@ -1,5 +1,15 @@
 #!/usr/bin/env bats # -*- shell-script -*-
 
+function loop_over_options {
+    # Valid options, just incompatible
+    for opts in -{d,e,i,v,h}{d,e,i,v,h}; do
+        run ../gpgwrapper $opts data/key1
+	# printf "debug: $status <- %s %s\n" $opts "$output" >&3
+        [ "$status" -ne 0 ] || return 1
+        grep 'exiting: can only use one of -d -e -i -h or -v' <<<$output || return 1
+    done
+    return 0
+}
 
 # This wrapper exists to avoid using IO redirection params in tests
 # (because bats uses the 'run' wrapper command).  It calls gpgwrapper
@@ -87,3 +97,28 @@ function setup {
     grep 'exiting: decryption failed' <<<$output
 }
 
+@test "no options or parameters" {
+    run ../gpgwrapper
+    [ "$status" -ne 0 ]
+    grep 'exiting: you must supply one of the options -d -e -i -v or -h' <<<$output
+}
+
+@test "too many parameters" {
+    # Valid options, just too many.
+    run GPGWRAPPER_IO -ik tmp/sk data/pub1.key data/pub1.key tmp/out
+    [ "$status" -ne 0 ]
+    grep 'exiting: superfluous parameters were supplied' <<<$output
+}
+
+@test "incompatible options" {
+    # bats uses preprocessing magic, so doesn't support looping tests,
+    # and we need to loop in a helper function
+    run loop_over_options
+    [ "$status" -eq 0 ]
+}
+
+@test "help" {
+    run ../gpgwrapper -h
+    [ "$status" -eq 0 ]
+    grep 'USAGE:' <<<$output
+}
