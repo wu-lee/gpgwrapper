@@ -79,6 +79,14 @@ function standard_usage {
     ../gpgwrapper -dk tmp/sk -p 9 9<<<passphrase <tmp/enc1 >tmp/lorem
 }
 
+# round trip encrypt/decrypt with specified key index
+# Note: uses same keychain file
+function round_trip {
+    local ix=${1:?}
+    ../gpgwrapper -ek tmp/sk -r $(<data/$ix.id) <data/lorem >tmp/enc$ix &&
+    ../gpgwrapper -dk tmp/sk -r $(<data/$ix.id) -p data/$ix.passphrase <tmp/enc$ix >tmp/lorem
+}
+
 function setup {
     # Clear gpg-agent passphrase cache
     GNUPGHOME=tmp/sk gpgconf --reload gpg-agent
@@ -89,14 +97,14 @@ function setup {
 }
 
 @test "standard usage case: create, encode, restore" {
-    run standard_usage
+    run standard_usage 1 passphrase
     [ "$status" -eq 0 ]
     diff -q data/lorem tmp/lorem
 }
 
 @test "resist PATH hijacking" {
     # the dummy dir contains fake commands like cat, base64, openssl
-    PATH=dummy:$PATH run standard_usage
+    PATH=dummy:$PATH run standard_usage 1 passphrase
     [ "$status" -eq 0 ] || echo rc $status $output
     diff -q data/lorem tmp/lorem
 }
@@ -131,6 +139,19 @@ function setup {
     run GPGWRAPPER_IO -dk tmp/sk -p 9 data/enc2 tmp/dec2 9<<<passphrase2
     [ "$status" -eq 0 ]
     diff -q data/lorem tmp/dec2
+}
+
+@test "encrypt with key specified by -r with multiple keys" {
+    ../gpgwrapper -ik tmp/sk <data/sec1.key 
+    ../gpgwrapper -ik tmp/sk <data/sec2.key
+    
+    run round_trip 1
+    [ "$status" -eq 0 ]
+    diff -q data/lorem tmp/lorem
+    
+    run round_trip 2
+    [ "$status" -eq 0 ]
+    diff -q data/lorem tmp/lorem
 }
 
 @test "wrong key decrypt failure" {
@@ -221,4 +242,36 @@ function setup {
     run GPGWRAPPER_IO -ek tmp/pk data/lorem tmp/out
     [ "$status" -ne 0 ]
     grep 'exiting: encryption failed' <<<$output
+}
+
+@test "bad options: unknown key with -r while encrypting" {
+    ../gpgwrapper -ik tmp/pk <data/pub1.key 
+    run GPGWRAPPER_IO -ek tmp/pk -r $(<data/2.id) data/lorem tmp/enc1
+    [ "$status" -ne 0 ]
+    grep 'No public key' <<<$output
+    grep 'exiting: encryption failed' <<<$output
+}
+
+@test "bad options: unknown key while decrypting" {
+    ../gpgwrapper -ik tmp/sk <data/sec1.key 
+    run GPGWRAPPER_IO -dk tmp/sk -p data/2.passphrase data/enc1 tmp/dec1
+    [ "$status" -ne 0 ]
+    grep 'No secret key' <<<$output
+    grep 'exiting: decryption failed' <<<$output
+}
+
+@test "bad options: unknown key with -r while decrypting" {
+    ../gpgwrapper -ik tmp/sk <data/sec1.key 
+    run GPGWRAPPER_IO -dk tmp/sk -r $(<data/2.id) -p data/2.passphrase data/enc1 tmp/dec1
+    [ "$status" -ne 0 ]
+    grep 'No secret key' <<<$output
+    grep 'exiting: decryption failed' <<<$output
+}
+
+
+@test "Use GNUPGHOME if -k unused" {
+    ../gpgwrapper -ik tmp/sk <data/sec1.key 
+    GNUPGHOME=tmp/sk run round_trip 1
+    [ "$status" -eq 0 ]
+    diff -q data/lorem tmp/lorem
 }
