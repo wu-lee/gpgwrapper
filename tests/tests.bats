@@ -11,6 +11,44 @@ function loop_over_options {
     return 0
 }
 
+
+# test recipient when there are multiple keys
+
+# bad options: nonesuch key in -r
+
+# bad options: no public key in -r
+
+# empty r
+
+# @test "missing encryption key" {
+#     run GPGWRAPPER_IO -e tmp/missing data/lorem tmp/enc
+#     [ "$status" -ne 0 ]
+#     grep 'exiting: no such file: tmp/missing' <<<$output
+# }
+
+# @test "missing decryption key" {
+#     run GPGWRAPPER_IO -d tmp/missing data/lorem tmp/dec
+#     [ "$status" -ne 0 ]
+#     grep 'exiting: no such file: tmp/missing' <<<$output
+# }
+
+# @test "empty keychain" {
+#     printf "" >tmp/empty
+#     run GPGWRAPPER_IO -e tmp/empty data/lorem tmp/enc
+#     [ "$status" -ne 0 ]
+#     grep 'exiting: rsaencrypt failed' <<<$output
+# }
+
+# @test "empty file encrypting" {
+#     printf "" >tmp/empty
+#     run GPGWRAPPER_IO -e data/key1.pub tmp/empty tmp/enc
+#     [ "$status" -eq 0 ]
+#     [ -s tmp/enc ]
+# }
+
+
+# -----
+
 # This wrapper exists to avoid using IO redirection params in tests
 # (because bats uses the 'run' wrapper command).  It calls gpgwrapper
 # with the last two params defining the file redirection for stdin and
@@ -63,11 +101,29 @@ function setup {
     diff -q data/lorem tmp/lorem
 }
 
-@test "decrypt pre-encrypted data 1" {
+@test "decrypt pre-encrypted data 1, with passphrase from descriptor" {
     ../gpgwrapper -ik tmp/sk <data/sec1.key 
     run GPGWRAPPER_IO -dk tmp/sk -p 9 data/enc1 tmp/dec1 9<<<passphrase
     [ "$status" -eq 0 ]
     diff -q data/lorem tmp/dec1
+}
+
+@test "decrypt pre-encrypted data 1, with passphrase from file" {
+    ../gpgwrapper -ik tmp/sk <data/sec1.key
+    printf "passphrase\n" >tmp/passphrase
+    run GPGWRAPPER_IO -dk tmp/sk -p tmp/passphrase data/enc1 tmp/dec1
+    [ "$status" -eq 0 ]
+    diff -q data/lorem tmp/dec1
+}
+
+@test "decrypt pre-encrypted data 1, with passphrase from numeric file" {
+    ../gpgwrapper -ik tmp/sk <data/sec1.key
+    printf "passphrase\n" >9
+    run GPGWRAPPER_IO -dk tmp/sk -p 9 data/enc1 tmp/dec1
+    [ "$status" -ne 0 ]
+    rm 9
+    grep 'gpg: public key decryption failed: No passphrase given' <<<$output
+    grep 'exiting: decryption failed' <<<$output
 }
 
 @test "decrypt pre-encrypted data 2" {
@@ -121,4 +177,48 @@ function setup {
     run ../gpgwrapper -h
     [ "$status" -eq 0 ]
     grep 'USAGE:' <<<$output
+}
+
+@test "bad options: nonnumeric, non-file -p" {
+    ../gpgwrapper -ik tmp/sk <data/sec1.key
+    mkdir tmp/passphrase
+    run GPGWRAPPER_IO -dk tmp/sk -p tmp/passphrase data/enc1 tmp/dec1
+    [ "$status" -ne 0 ]
+    grep 'exiting: -p option argument is neither numeric nor a file' <<<$output
+}
+
+@test "bad options: missing -p argument" {
+    ../gpgwrapper -ik tmp/sk <data/sec1.key
+    run GPGWRAPPER_IO -dk tmp/sk -p data/enc1 tmp/dec1
+    [ "$status" -ne 0 ]
+    grep 'gpgwrapper: option requires an argument -- p' <<<$output
+}
+
+@test "bad options: negative -p" {
+    ../gpgwrapper -ik tmp/sk <data/sec1.key
+    run GPGWRAPPER_IO -dk tmp/sk -p -9 data/enc1 tmp/dec1
+    [ "$status" -ne 0 ]
+    grep 'exiting: -p option argument is neither numeric nor a file' <<<$output
+}
+
+@test "bad options: empty -p option" {
+    ../gpgwrapper -ik tmp/sk <data/sec1.key
+    run GPGWRAPPER_IO -dk tmp/sk -p data/enc2 tmp/dec2
+    [ "$status" -ne 0 ]
+    grep 'gpgwrapper: option requires an argument -- p' <<<$output
+}
+
+@test "bad options: pre-existing file for -k" {
+    touch tmp/pk
+    run GPGWRAPPER_IO -ek tmp/pk data/lorem tmp/out
+    [ "$status" -ne 0 ]
+    grep 'exiting: cannot create keychain directory' <<<$output
+}
+
+@test "bad options: empty dir for -k" {
+    mkdir tmp/pk
+    chmod 0700 tmp/pk
+    run GPGWRAPPER_IO -ek tmp/pk data/lorem tmp/out
+    [ "$status" -ne 0 ]
+    grep 'exiting: encryption failed' <<<$output
 }
