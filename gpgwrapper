@@ -45,14 +45,18 @@ GNUPG_VERSION=$("$GPG" --version) || die "Failed to get gpg version"
 function sethome() {
     local keyhome=${1?you must supply a keyhome directory}
     [[ -d "$keyhome" ]] || {
-        "$MKDIR" -p "$keyhome"
+        "$MKDIR" -p "$keyhome" || die "cannot create keychain directory"
         
         # Work around issues with gpg-agent < 2.1.12 not enabling loopback.
         # See https://lists.gnupg.org/pipermail/gnupg-devel/2016-October/031899.html
         printf "allow-loopback-pinentry\n" >>"$keyhome/gpg-agent.conf"
-        "$CHMOD" 0700 "$keyhome/gpg-agent.conf"
-        "$CHOWN" $EUID "$keyhome"
-        "$CHMOD" 0700 "$keyhome"
+        "$CHMOD" 0700 "$keyhome/gpg-agent.conf" ||
+	    die "cannot set keychain directory mode"
+	"$CHOWN" $EUID "$keyhome" ||
+	    die "cannot set keychain directory owner"
+        "$CHMOD" 0700 "$keyhome" ||
+	    die "cannot set keychain directory mode"
+
     }
     
     export GNUPGHOME="$keyhome"
@@ -160,7 +164,7 @@ do
 
         p)
             # Get passphrase from somewhere
-            if [[ "$OPTARG" =~ [0-9]+ ]]; then
+            if [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
                 passphrase_opt=(--passphrase-fd "$OPTARG")
             elif [[ -f "$OPTARG" ]]; then
                 passphrase_opt=(--passphrase-file "$OPTARG")
