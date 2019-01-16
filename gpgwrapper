@@ -62,8 +62,8 @@ function sethome() {
     export GNUPGHOME="$keyhome"
 }
 
-# import $pubkey 
-function import_pubkey() {
+# import <keyfile 
+function import_key() {
     "$GPG" $COMMON --import ||
 	die "import failed"
 }
@@ -213,7 +213,7 @@ fi
 case "$operation" in
     d) decrypt; exit;;
     e) encrypt "${recipient:-$(firstid)}"; exit;;
-    i) import_pubkey; exit;;
+    i) import_key; exit;;
 esac
 
 warn "Use the -h option for usage information."
