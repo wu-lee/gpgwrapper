@@ -184,12 +184,12 @@ do
 
         p)
             # Get passphrase from somewhere
-            if [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
-                passphrase_opt=(--passphrase-fd "$OPTARG")
-            elif [[ -f "$OPTARG" ]]; then
+            if [[ -f "$OPTARG" ]]; then
                 passphrase_opt=(--passphrase-file "$OPTARG")
-            else
-                die "-p option argument is neither numeric nor a file"
+            elif [[ "$OPTARG" =~ ^[0-9]+$ ]]; then
+                passphrase_opt=(--passphrase-fd "$OPTARG")
+	    else
+                die "-p option argument is neither a file nor numeric"
             fi
             ;;
 

@@ -128,10 +128,9 @@ function setup {
     ../gpgwrapper -ik tmp/sk <data/sec1.key
     printf "passphrase\n" >9
     run GPGWRAPPER_IO -dk tmp/sk -p 9 data/enc1 tmp/dec1
-    [ "$status" -ne 0 ]
+    [ "$status" -eq 0 ]
     rm 9
-    grep 'gpg: public key decryption failed: No passphrase given' <<<$output
-    grep 'exiting: decryption failed' <<<$output
+    diff -q data/lorem tmp/dec1
 }
 
 @test "decrypt pre-encrypted data 2" {
@@ -205,7 +204,7 @@ function setup {
     mkdir tmp/passphrase
     run GPGWRAPPER_IO -dk tmp/sk -p tmp/passphrase data/enc1 tmp/dec1
     [ "$status" -ne 0 ]
-    grep 'exiting: -p option argument is neither numeric nor a file' <<<$output
+    grep 'exiting: -p option argument is neither a file nor numeric' <<<$output
 }
 
 @test "bad options: missing -p argument" {
@@ -219,7 +218,7 @@ function setup {
     ../gpgwrapper -ik tmp/sk <data/sec1.key
     run GPGWRAPPER_IO -dk tmp/sk -p -9 data/enc1 tmp/dec1
     [ "$status" -ne 0 ]
-    grep 'exiting: -p option argument is neither numeric nor a file' <<<$output
+    grep 'exiting: -p option argument is neither a file nor numeric' <<<$output
 }
 
 @test "bad options: empty -p option" {
