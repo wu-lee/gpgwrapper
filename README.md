@@ -149,10 +149,11 @@ complexity and awkwardness of GPG's key management is not avoided but
 it can be minimised enough for our purposes, and the various
 command-line options hidden.
 
-I use `gpg2`, generally because it is newer and better suited for
-batch scripting - it has options for controlling pinentry etc. Since
+I use `gpg` version2 as it has options for controlling pinentry. Since
 for security we deliberately avoid using the `PATH` to find
-executables, is assumed that this is at `/usr/bin/gpg2`.
+executables, it is assumed that this is at `/usr/bin/gpg`. If this is
+not the case you may need to either insert a symlink to the right
+executable, or modify the script appropriately for your system.
 
 I use built-in Bash commands instead of external commands where
 possible, to reduce dependencies.
@@ -194,6 +195,26 @@ Or directly like this:
 
 # CAVEATS / DISCLAIMER
 
+Other than the caveats below, this script works correctly to the best
+of my knowledge. However, as ever with open source software: inspect
+the source code and use at your own risk.
+
+## GPG < v2.1.11 are not supported.
+
+This script does not support `gpg` versions < 2.1.11, as it requires
+the `--pinentry-mode` option.
+
+Therefore the executable `/usr/bin/gpg2` will be used if it exists,
+and `/usr/bin/gpg` otherwise (since some systems can install
+both). The output with the `--version` option is checked, and a
+warning printed if it is unsupported.
+
+If you see this warning you may need to install the correct version
+and either symlink it to one of these paths, or alter the GPG variable
+assignment in the script.
+
+## Loopback pinentry should be enabled
+
 For versions of `gpg-agent` <2.1.12 loopback pinentry is not enabled
 by default, and you need to enable it to decrypt without a passphrase
 prompt by adding `allow-loopback-pinentry` into
@@ -210,14 +231,9 @@ passphrase beforehand by using `gpg` directly and entering it into the
 pin-entry dialog which pops up. (This dialog is disabled in
 `gpgwrapper`.)
 
-Other than this, this script works correctly to the best of my
-knowledge. However, as ever with open source software: inspect the
-source code and use at your own risk.
-
-
 # REQUIREMENTS
 
- - `/usr/bin/gpg2`
+ - `/usr/bin/gpg2` or `/usr/bin/gpg`
  - `/bin/bash`
  - `/bin/mkdir`
  - `/bin/chown`

@@ -2,18 +2,23 @@
 
 # Author: Nick Stokoe
 #
-# https://github.com/wu-lee/gpgwrapper
-#
 # For usage, execute with no parameters, or see the `usage` function
 # below.
+
+PROJECT_URL=https://github.com/wu-lee/gpgwrapper
 
 set -o pipefail
 set -o errexit
 
 # Defaults
 
-# We need gpg2 for it's pinentry control
-GPG=/usr/bin/gpg2
+# Note: we need gpg >= v2.1.11 for it's --pinentry-mode option.  Gpg
+# will fail immediately if that is not supported. However, some
+# systems we use install both as gpg and gpg2, so we try to avoid
+# instant failure on these.
+GPG=/usr/bin/gpg2 # Prefer this.
+[[ -f "$GPG" ]] || GPG=/usr/bin/gpg # Fall back to this.
+
 COMMON="--exit-on-status-write-error --no-tty --batch --trust-model always --pinentry-mode loopback"
 MKDIR=/bin/mkdir
 CHMOD=/bin/chmod
@@ -39,7 +44,8 @@ function copyout() {
 
 # Versioning.
 VERSION=0.2.0
-GNUPG_VERSION=$("$GPG" --version) || die "Failed to get gpg version"
+GNUPG_VERSION=$("$GPG" --version) ||
+    die "Failed to get gpg version. Is $GPG installed?"
 
 # sethome <dir> - sets the GNUPGHOME environment variable
 function sethome() {
@@ -141,8 +147,22 @@ Prints this usage.
 
 
 USAGE
+    # Keep this outside the USAGE heredoc, so it is not clobbered by
+    # the usage-inserter.
+    warn "For more information, see: $PROJECT_URL"
 }
 
+function version_warning() {
+        copyout >&2 <<EOF
+WARNING: gpg version < 2.1.11 is not supported.
+
+Please ensure $GPG is a supported version, or amend this script's
+GPG variable to point to one. See guidance here:
+
+    $PROJECT_URL
+
+EOF
+}
 
 # Parse the options
 while getopts "deihk:p:r:v" OPTION
@@ -183,6 +203,17 @@ done
 # Remove the options from the argument list
 shift $((OPTIND-1))
 
+# Warn if gpg version is < 2.1.11. Continue in any case, as -h or -v
+# options may be supplied. The use of --pinentry-mode will cause an
+# error if gpg is invoked to do anything else.
+if [[ "$GNUPG_VERSION" =~ ^gpg\ \(GnuPG\)\ ([0-9.]+) ]]; then
+    case "${BASH_REMATCH[1]}" in
+	1.*|2.1.?|2.1.10)
+	    version_warning;;
+    esac
+else
+    version_warning
+fi
 
 # Help?
 if [[ "$operation" == "h" ]]; then
